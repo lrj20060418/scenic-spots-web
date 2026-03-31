@@ -9,19 +9,45 @@
   <body>
     <header class="site-header">
       <div class="container">
-        <h1 class="site-title">景点列表</h1>
+        <div class="header-row">
+          <h1 class="site-title">景点列表</h1>
+          <button id="themeToggleBtn" type="button" aria-label="切换深色模式">🌙</button>
+        </div>
       </div>
     </header>
 
     <main class="container">
-      <section aria-label="search">
-        <input
-          id="searchInput"
-          type="search"
-          placeholder="搜索景点名称/城市"
-          autocomplete="off"
-        />
-      </section>
+      <div class="toolbar-row">
+        <section aria-label="search" class="toolbar-grow">
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="搜索景点名称/城市"
+            autocomplete="off"
+          />
+        </section>
+
+        <section aria-label="reset">
+          <button id="resetBtn" type="button">重置</button>
+        </section>
+      </div>
+
+      <div class="toolbar-row">
+        <section aria-label="favorites">
+          <button
+            id="onlyFavoritesBtn"
+            type="button"
+            aria-pressed="false"
+            onclick="this.setAttribute('aria-pressed', this.getAttribute('aria-pressed') === 'true' ? 'false' : 'true')"
+          >
+            只看收藏
+          </button>
+        </section>
+
+        <section aria-label="tags" class="toolbar-grow">
+          <div id="tagFilters"></div>
+        </section>
+      </div>
 
       <section aria-label="scenic spots list">
         <ul id="spotsList" class="spots-list"></ul>
