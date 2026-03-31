@@ -3,6 +3,31 @@
   let allSpots = [];
   /** 已选中的标签集合（支持多选） */
   const selectedTags = new Set();
+  /** 已收藏景点 id 集合（localStorage 持久化） */
+  const favoriteIds = new Set();
+
+  const FAVORITES_KEY = "favoriteSpotIds";
+
+  /**
+   * 从 localStorage 读取收藏 id 列表到 favoriteIds。
+   */
+  function loadFavorites() {
+    try {
+      const raw = localStorage.getItem(FAVORITES_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      favoriteIds.clear();
+      for (const id of Array.isArray(arr) ? arr : []) favoriteIds.add(String(id));
+    } catch {
+      favoriteIds.clear();
+    }
+  }
+
+  /**
+   * 把当前 favoriteIds 写回 localStorage。
+   */
+  function saveFavorites() {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(Array.from(favoriteIds)));
+  }
 
   /**
    * 格式化价格显示。
@@ -46,6 +71,16 @@
       const li = document.createElement("li");
       li.className = "spot-card";
 
+      const favBtn = document.createElement("button");
+      favBtn.type = "button";
+      favBtn.className = "favorite-btn";
+      favBtn.setAttribute("aria-label", "收藏");
+      const spotId = String(spot?.id ?? "");
+      favBtn.dataset.id = spotId;
+      const isFav = spotId && favoriteIds.has(spotId);
+      favBtn.setAttribute("aria-pressed", isFav ? "true" : "false");
+      favBtn.textContent = isFav ? "★" : "☆";
+
       const img = document.createElement("img");
       img.src = spot.image ?? "";
       img.alt = spot.name ?? "spot";
@@ -81,7 +116,7 @@
       openTime.textContent = `开放：${spot.open_time ?? ""}`;
       openTime.className = "spot-open-time";
 
-      li.append(img, title, city, tags, rating, price, openTime);
+      li.append(favBtn, img, title, city, tags, rating, price, openTime);
       listEl.appendChild(li);
     }
   }
@@ -167,6 +202,15 @@
   }
 
   /**
+   * 是否开启“只看收藏”模式。
+   * @returns {boolean} true 表示只展示已收藏景点
+   */
+  function isOnlyFavoritesEnabled() {
+    const btn = document.getElementById("onlyFavoritesBtn");
+    return btn?.getAttribute?.("aria-pressed") === "true";
+  }
+
+  /**
    * 过滤景点数据：同时满足“搜索 AND 标签”。
    * - 搜索：模糊匹配 name 或 city
    * - 标签：命中任意已选标签即可（OR），但整体与搜索是 AND
@@ -177,8 +221,15 @@
   function filterSpots(spots, query) {
     const q = normalizeText(query);
     const needSearch = Boolean(q);
+    const onlyFav = isOnlyFavoritesEnabled();
 
     return (Array.isArray(spots) ? spots : []).filter((s) => {
+      // 收藏条件（若开启“只看收藏”）
+      if (onlyFav) {
+        const id = String(s?.id ?? "");
+        if (!id || !favoriteIds.has(id)) return false;
+      }
+
       // 标签条件
       if (!matchSelectedTags(s)) return false;
 
@@ -228,6 +279,187 @@
   }
 
   /**
+   * 显示详情弹窗，并把当前景点信息填充进去。
+   * @param {object} spot - 当前点击的景点数据
+   */
+  function showModal(spot) {
+    const overlay = document.getElementById("detailOverlay");
+    const modal = document.getElementById("detailModal");
+    const content = document.getElementById("detailContent");
+    if (!overlay || !modal || !content) return;
+
+    content.textContent = "";
+
+    const img = document.createElement("img");
+    img.src = spot?.image ?? "";
+    img.alt = spot?.name ?? "spot";
+    img.loading = "lazy";
+    img.className = "detail-image";
+    img.addEventListener("click", () => {
+      if (!img.src) return;
+      showImageViewer(img.src, img.alt);
+    });
+
+    const title = document.createElement("h2");
+    title.textContent = spot?.name ?? "";
+
+    const desc = document.createElement("p");
+    desc.textContent = spot?.description ?? "";
+
+    const duration = document.createElement("div");
+    const mins = spot?.visit_minutes;
+    duration.textContent = `游玩时长：${Number.isFinite(mins) ? `${mins} 分钟` : ""}`;
+
+    content.append(img, title, desc, duration);
+
+    overlay.hidden = false;
+    modal.hidden = false;
+  }
+
+  /**
+   * 全屏展示图片（点击任意位置关闭）。
+   * @param {string} src - 图片地址
+   * @param {string} alt - 图片描述
+   */
+  function showImageViewer(src, alt) {
+    let viewer = document.getElementById("imageViewer");
+    if (!viewer) {
+      viewer = document.createElement("div");
+      viewer.id = "imageViewer";
+      viewer.className = "image-viewer";
+      viewer.hidden = true;
+
+      const img = document.createElement("img");
+      img.className = "image-viewer-img";
+      viewer.appendChild(img);
+
+      const hideViewer = () => {
+        viewer.hidden = true;
+      };
+
+      // 点击任意位置关闭（包含点击图片本身）
+      viewer.addEventListener("click", hideViewer);
+      img.addEventListener("click", hideViewer);
+
+      document.body.appendChild(viewer);
+    }
+
+    const imgEl = viewer.querySelector("img");
+    if (imgEl) {
+      imgEl.src = src;
+      imgEl.alt = alt ?? "";
+    }
+    viewer.hidden = false;
+  }
+
+  /**
+   * 关闭详情弹窗（隐藏遮罩层与弹窗）。
+   */
+  function hideModal() {
+    const overlay = document.getElementById("detailOverlay");
+    const modal = document.getElementById("detailModal");
+    if (overlay) overlay.hidden = true;
+    if (modal) modal.hidden = true;
+  }
+
+  /**
+   * 初始化弹窗关闭：点击关闭按钮或遮罩层时关闭。
+   */
+  function initModalClose() {
+    const overlay = document.getElementById("detailOverlay");
+    const closeBtn = document.getElementById("detailCloseBtn");
+
+    overlay?.addEventListener("click", hideModal);
+    closeBtn?.addEventListener("click", hideModal);
+  }
+
+  /**
+   * 初始化卡片点击：点击某个景点卡片时打印对应景点信息。
+   * 说明：不修改 renderSpots 的结构，通过事件代理 + 文本匹配拿到当前景点数据。
+   */
+  function initCardClick() {
+    const listEl = document.getElementById("spotsList");
+    if (!listEl) return;
+
+    listEl.addEventListener("click", (e) => {
+      if (e.target?.closest?.(".favorite-btn")) return;
+      const card = e.target?.closest?.("li");
+      if (!card || card.parentElement !== listEl) return;
+      if (card.textContent?.includes?.("暂无匹配的景点")) return;
+
+      const name = card.querySelector?.("h3")?.textContent?.trim?.() ?? "";
+      const city = card.querySelector?.(".spot-city")?.textContent?.trim?.() ?? "";
+
+      const spot = allSpots.find((s) => (s?.name ?? "") === name && (s?.city ?? "") === city);
+      if (spot) {
+        console.log("[spot click]", spot);
+        showModal(spot);
+      }
+      else console.log("[spot click] not found", { name, city });
+    });
+  }
+
+  /**
+   * 初始化收藏：点击收藏按钮切换收藏状态，并写入 localStorage。
+   */
+  function initFavorites() {
+    loadFavorites();
+
+    const listEl = document.getElementById("spotsList");
+    if (!listEl) return;
+
+    listEl.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.(".favorite-btn");
+      if (!btn || btn.parentElement?.parentElement !== listEl) return;
+
+      const id = String(btn.dataset?.id ?? "");
+      if (!id) return;
+
+      const isFav = favoriteIds.has(id);
+      if (isFav) favoriteIds.delete(id);
+      else favoriteIds.add(id);
+      saveFavorites();
+
+      btn.setAttribute("aria-pressed", (!isFav).toString());
+      btn.textContent = !isFav ? "★" : "☆";
+    });
+  }
+
+  /**
+   * 初始化“只看收藏”按钮：切换时刷新列表（在当前搜索词/标签条件基础上生效）。
+   */
+  function initOnlyFavorites() {
+    const btn = document.getElementById("onlyFavoritesBtn");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+      // 若按钮在 HTML 里自带 aria-pressed 切换，这里等状态更新后再刷新
+      queueMicrotask(() => {
+        const input = document.getElementById("searchInput");
+        applySearch(input?.value ?? "");
+      });
+    });
+  }
+
+  /**
+   * 初始化主题切换：通过切换 body 的 dark-mode class 改变主题。
+   */
+  function initThemeToggle() {
+    const btn = document.getElementById("themeToggleBtn");
+    if (!btn) return;
+
+    const THEME_KEY = "themeMode";
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === "dark") document.body.classList.add("dark-mode");
+    if (saved === "light") document.body.classList.remove("dark-mode");
+
+    btn.addEventListener("click", () => {
+      const isDark = document.body.classList.toggle("dark-mode");
+      localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
+    });
+  }
+
+  /**
    * 从 spots.json 读取数据并渲染初始列表。
    * 说明：此阶段只做数据读取 + 渲染，不包含筛选等后续功能。
    */
@@ -246,8 +478,13 @@
     }
   }
 
+  initFavorites();
+  initOnlyFavorites();
+  initThemeToggle();
   initSearch();
   initTagMultiSelect();
   initReset();
+  initCardClick();
+  initModalClose();
   void loadSpots();
 })();
