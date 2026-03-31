@@ -1,4 +1,6 @@
 (() => {
+  let allSpots = [];
+
   function formatPrice(price) {
     if (price === 0) return "免费";
     if (typeof price === "number" && Number.isFinite(price)) return `¥${price}`;
@@ -15,6 +17,13 @@
     if (!listEl) return;
 
     listEl.textContent = "";
+
+    if (!Array.isArray(spots) || spots.length === 0) {
+      const li = document.createElement("li");
+      li.textContent = "暂无匹配的景点";
+      listEl.appendChild(li);
+      return;
+    }
 
     for (const spot of spots) {
       const li = document.createElement("li");
@@ -48,6 +57,35 @@
     }
   }
 
+  function normalizeText(v) {
+    return String(v ?? "").trim().toLowerCase();
+  }
+
+  function applySearch(query) {
+    const q = normalizeText(query);
+    if (!q) {
+      renderSpots(allSpots);
+      return;
+    }
+
+    const filtered = allSpots.filter((s) => {
+      const name = normalizeText(s?.name);
+      const city = normalizeText(s?.city);
+      return name.includes(q) || city.includes(q);
+    });
+
+    renderSpots(filtered);
+  }
+
+  function initSearch() {
+    const input = document.getElementById("searchInput");
+    if (!input) return;
+
+    input.addEventListener("input", (e) => {
+      applySearch(e.target?.value);
+    });
+  }
+
   async function loadSpots() {
     try {
       const res = await fetch("../spots.json");
@@ -55,11 +93,13 @@
 
       const data = await res.json();
       console.log("[spots.json]", data);
-      renderSpots(Array.isArray(data?.spots) ? data.spots : []);
+      allSpots = Array.isArray(data?.spots) ? data.spots : [];
+      renderSpots(allSpots);
     } catch (err) {
       console.error("[spots.json] fetch error", err);
     }
   }
 
+  initSearch();
   void loadSpots();
 })();
