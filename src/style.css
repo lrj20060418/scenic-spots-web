@@ -6,6 +6,7 @@
   --muted: #a9b7d3;
   --border: rgba(255, 255, 255, 0.12);
   --accent: #7aa2ff;
+  --shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
 }
 
 * {
@@ -43,15 +44,20 @@ body {
   letter-spacing: 0.2px;
 }
 
+main.container > section {
+  margin-top: 14px;
+}
+
 input[type="search"] {
   width: 100%;
-  margin-top: 14px;
-  padding: 10px 12px;
+  padding: 11px 12px;
   border-radius: 12px;
   border: 1px solid var(--border);
   background: rgba(15, 27, 51, 0.45);
   color: var(--text);
   outline: none;
+  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
 
 input[type="search"]::placeholder {
@@ -61,6 +67,54 @@ input[type="search"]::placeholder {
 input[type="search"]:focus {
   border-color: rgba(122, 162, 255, 0.75);
   box-shadow: 0 0 0 4px rgba(122, 162, 255, 0.18);
+  background: rgba(15, 27, 51, 0.6);
+}
+
+#tagFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button {
+  font: inherit;
+}
+
+#tagFilters > button,
+#resetBtn {
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(15, 27, 51, 0.45);
+  color: rgba(232, 238, 252, 0.88);
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease,
+    box-shadow 140ms ease;
+  user-select: none;
+}
+
+#tagFilters > button:hover,
+#resetBtn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(122, 162, 255, 0.35);
+}
+
+#tagFilters > button.is-selected {
+  color: var(--text);
+  border-color: rgba(122, 162, 255, 0.75);
+  background: rgba(122, 162, 255, 0.16);
+  box-shadow: 0 0 0 3px rgba(122, 162, 255, 0.12);
+}
+
+#resetBtn {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+#resetBtn:active,
+#tagFilters > button:active {
+  transform: translateY(0);
 }
 
 .spots-list {
@@ -79,43 +133,99 @@ input[type="search"]:focus {
 }
 
 .spots-list > li {
-  display: grid;
-  grid-template-rows: auto auto 1fr;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(15, 27, 51, 0.65);
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(234, 239, 250, 0.92);
+  color: #0b1220;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
   will-change: transform;
+
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "img img"
+    "title city"
+    "tags tags"
+    "rating price"
+    "open open";
+  gap: 10px 12px;
+  padding: 0 14px 14px;
 }
 
 .spots-list > li:hover {
   transform: translateY(-2px);
   border-color: rgba(122, 162, 255, 0.35);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.32);
+  box-shadow: var(--shadow);
 }
 
 .spots-list > li > img {
   width: 100%;
-  height: auto;
   aspect-ratio: 16 / 10;
   object-fit: cover;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.06);
   display: block;
+  grid-area: img;
+  border-radius: 14px;
+  margin: 14px 0 2px;
 }
 
-.spots-list > li > h3 {
+.spot-title {
+  grid-area: title;
   margin: 0;
-  font-size: 16px;
-  line-height: 1.3;
+  font-size: 22px;
+  line-height: 1.2;
   letter-spacing: 0.2px;
+  font-weight: 800;
 }
 
-.spots-list > li > div {
-  color: var(--muted);
+.spot-city {
+  grid-area: city;
+  align-self: center;
+  justify-self: end;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.55);
+}
+
+.spot-tags {
+  grid-area: tags;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
   font-size: 13px;
+  font-weight: 700;
+  color: #3b42f0;
+  background: rgba(110, 116, 255, 0.14);
+  border: 1px solid rgba(110, 116, 255, 0.22);
+}
+
+.spot-rating,
+.spot-price,
+.spot-open-time {
+  font-size: 15px;
   line-height: 1.5;
+  color: rgba(15, 23, 42, 0.7);
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.spot-rating {
+  grid-area: rating;
+}
+
+.spot-price {
+  grid-area: price;
+  justify-self: end;
+}
+
+.spot-open-time {
+  grid-area: open;
 }
