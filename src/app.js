@@ -50,7 +50,7 @@
 
   async function loadSpots() {
     try {
-      const res = await fetch("./spots.json");
+      const res = await fetch("../spots.json");
       if (!res.ok) throw new Error(`Failed to fetch spots.json: ${res.status} ${res.statusText}`);
 
       const data = await res.json();
